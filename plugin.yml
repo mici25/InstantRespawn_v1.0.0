@@ -1,0 +1,6 @@
+name: InstantRespawn
+version: 1.0.0
+api: 5.0.0
+main: micii6\main
+author: micii6
+description: A plugin to instantly respawn after death.
