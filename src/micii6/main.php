@@ -3,9 +3,10 @@
 namespace micii6;
 
 use pocketmine\event\Listener;
-use pocketmine\event\player\PlayerDeathEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\plugin\PluginBase;
-use pocketmine\scheduler\ClosureTask;
+use pocketmine\player\GameMode;
+use pocketmine\player\Player;
 
 class main extends PluginBase implements Listener {
 
@@ -14,14 +15,38 @@ class main extends PluginBase implements Listener {
         $this->saveDefaultConfig();
     }
 
-    public function onDeath(PlayerDeathEvent $event): void {
-        $player = $event->getPlayer();
+    public function onDamage(EntityDamageEvent $event): void {
+        $entity = $event->getEntity();
 
-        $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player): void {
-            if (!$player->isOnline()) {
-                return;
+        if ($entity instanceof Player) {
+            $player = $entity;
+
+            if ($player->getHealth() - $event->getFinalDamage() <= 0) {
+                $event->cancel();
+
+                $originalGamemode = $player->getGamemode();
+
+                $defaultWorld = $this->getServer()->getWorldManager()->getDefaultWorld();
+                if ($defaultWorld !== null) {
+                    $spawnPosition = $defaultWorld->getSpawnLocation();
+                } else {
+                    $spawnPosition = $player->getWorld()->getSpawnLocation();
+                }
+
+                $player->teleport($spawnPosition);
+
+                $player->setGamemode($originalGamemode);
+                $player->setAllowFlight($originalGamemode === GameMode::CREATIVE() || $originalGamemode === GameMode::SPECTATOR());
+                $player->setFlying(false);
+                $player->setHealth($player->getMaxHealth());
+                $player->getHungerManager()->setFood(20);
+                $player->setSprinting(false);
+                $player->setSneaking(false);
+
+                $player->getEffects()->clear();
+                $player->getArmorInventory()->clearAll();
+                $player->getInventory()->clearAll();
             }
-            $player->respawn();
-        }), 1);
+        }
     }
 }
